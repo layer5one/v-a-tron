@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vaughan-a-tron Instruction Manual</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom styles and animations */
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #1a1a1d;
+            color: #c5c6c7;
+        }
+        .title-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+        .content-card, .menu-card {
+            background-color: #2a2a2e;
+            border: 2px solid #4b5563;
+            overflow: hidden;
+            position: relative;
+        }
+        .content-card {
+             min-height: 450px;
+        }
+        .slide-content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* Cheesy Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideInFromRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOutToLeft { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0; } }
+        @keyframes slideInFromLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOutToRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        @keyframes bob-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes text-shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+        /* Animation classes */
+        .anim-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .anim-slide-in-next { animation: slideInFromRight 0.5s ease-out forwards; }
+        .anim-slide-out-next { animation: slideOutToLeft 0.5s ease-in forwards; }
+        .anim-slide-in-prev { animation: slideInFromLeft 0.5s ease-out forwards; }
+        .anim-slide-out-prev { animation: slideOutToRight 0.5s ease-in forwards; }
+        .urgent-text {
+            animation: text-shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+
+        /* Button and Mascot styling */
+        .nav-button, .menu-button { transition: all 0.2s ease-in-out; }
+        .nav-button:hover, .menu-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); }
+        .nav-button:disabled, .menu-button:disabled { opacity: 0.5; cursor: not-allowed; transform: translateY(0); box-shadow: none; }
+        
+        #service-job-bob {
+            position: absolute;
+            bottom: 1rem;
+            right: -15px; /* Nudged slightly outside the card */
+            width: 80px;
+            animation: bob-float 3s ease-in-out infinite;
+            z-index: 10;
+            pointer-events: none; /* So he doesn't block clicks */
+        }
+        #bob-speech-bubble {
+            position: absolute;
+            bottom: 90px;
+            right: 0; /* Nudged slightly outside the card */
+            background-color: #c5c6c7;
+            color: #1a1a1d;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            max-width: 250px;
+            font-size: 0.8rem;
+            border: 2px solid #4b5563;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            z-index: 20;
+            pointer-events: none; /* So it doesn't block clicks */
+        }
+        #bob-speech-bubble.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        #bob-speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            right: 30px;
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid #c5c6c7;
+        }
+        .tab-button {
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-button.active {
+            border-bottom-color: #2dd4bf; /* cyan-400 */
+            color: #2dd4bf;
+        }
+        #denisfield-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Behind all other content */
+            display: none; /* Initially hidden */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <canvas id="denisfield-canvas"></canvas>
+
+    <div class="w-full max-w-4xl mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 id="main-title" class="title-font text-3xl md:text-4xl text-cyan-400">Vaughan-a-tron</h1>
+            <p id="main-subtitle" class="text-gray-400 mt-2">Mainframe Instruction Menu</p>
+        </header>
+
+        <!-- Main Menu Screen -->
+        <div id="menu-screen">
+            <div class="menu-card rounded-lg shadow-2xl p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button id="start-chapter-1" class="menu-button bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg text-lg">
+                    Chapter 1: Intake
+                </button>
+                <button id="start-chapter-2" class="menu-button bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg text-lg">
+                    Chapter 2: The Service Jobs
+                </button>
+                <button id="start-chapter-3" class="menu-button bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg text-lg">
+                    Chapter 3: The Last Resort
+                </button>
+                <button id="start-chapter-4" class="menu-button bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 px-6 rounded-lg shadow-lg text-lg">
+                    Chapter 4: For The Chosen
+                </button>
+            </div>
+        </div>
+
+        <!-- Presentation Screen (Initially hidden) -->
+        <main id="presentation-screen" style="display: none;">
+            <div id="content-card" class="content-card rounded-lg shadow-2xl">
+                <!-- Content will be injected here -->
+                <!-- Service Job Bob Mascot -->
+                <div id="service-job-bob">
+                    <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Eyes -->
+                        <circle cx="45" cy="40" r="12" fill="white"/>
+                        <circle cx="45" cy="40" r="5" fill="black"/>
+                        <circle cx="75" cy="40" r="12" fill="white"/>
+                        <circle cx="75" cy="40" r="5" fill="black"/>
+                        <!-- Bent Paperclip Body -->
+                        <path d="M60,110 C40,110 30,90 30,70 S40,30 60,30 S90,50 90,70 C90,90 80,110 60,110 Z M60,30 C50,30 45,40 45,50" fill="none" stroke="#c5c6c7" stroke-width="8" stroke-linecap="round"/>
+                        <path d="M75,80 C85,80 90,70 90,60" fill="none" stroke="#c5c6c7" stroke-width="8" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div id="bob-speech-bubble"></div>
+            </div>
+
+            <!-- Navigation Controls -->
+            <div class="flex justify-between items-center mt-6">
+                 <button id="back-to-menu" class="nav-button bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg shadow-lg">
+                    Menu
+                </button>
+                <div class="flex-grow flex justify-center items-center space-x-4">
+                    <button id="prev-btn" class="nav-button bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg shadow-lg">
+                        Previous
+                    </button>
+                    <div id="step-indicator" class="text-gray-400 font-semibold">
+                        Step 1 / X
+                    </div>
+                    <button id="next-btn" class="nav-button bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-lg shadow-lg">
+                        Next
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            <p>&copy; 2025 On The Run Legal Solutions LLC. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CHAPTER 1 CONFIGURATION ---
+            const chapter1Steps = [
+                {
+                    title: "Chapter 1: Intake",
+                    content: "Welcome to the exciting world of document processing! Let's turn that pile of paper into beautifully organized data. Are you ready to begin the ritual?",
+                    bobTip: "The papers! They whisper secrets! Let's sort them before they achieve sentience."
+                },
+                {
+                    title: "Step 1: The Daily Drop",
+                    content: `<div class="flex flex-col lg:flex-row items-center gap-6 w-full px-4"><div class="lg:w-1/2 text-left text-base"><p class="mb-4">Your first task is to process the daily document drop.</p><ul class="list-disc list-inside space-y-2"><li>When Lee arrives, give him the maroon bag from the blue bag.</li><li>Empty the rest of the blue bag's contents onto the table.</li><li>The Vaughan documents for processing are in the green bin.</li><li class="font-bold text-cyan-300">Empty the entire contents of the green bin onto your work surface.</li></ul></div><div class="lg:w-1/2 mt-4 lg:mt-0"><img src="greenbin.png" alt="Green bin full of documents" class="rounded-lg shadow-lg border-2 border-gray-500 w-full h-auto max-w-sm mx-auto"></div></div>`,
+                    bobTip: "Yes, empty the bin! The paper demands to be free! Their rustling is a symphony of progress!"
+                },
+                {
+                    title: "Step 2: Find The Rushes!",
+                    content: `<div class="flex flex-col lg:flex-row items-center gap-6 w-full px-4"><div class="lg:w-1/2 mt-4 lg:mt-0"><img src="russians.png" alt="Chaotic pile of papers with red rush jobs hidden inside" class="rounded-lg shadow-lg border-2 border-gray-500 w-full h-auto max-w-sm mx-auto"></div><div class="lg:w-1/2 text-left text-base"><p class="mb-4 font-bold text-red-400">Make haste, you must empty it all!</p><p>Check for <strong class="text-red-400">Rushes</strong> that will need to go with General. You MUST find any and all Rushes that are buried deep inside the pile.</p><p class="mt-2">Even if they have an envelope marked "Rush", do not get complacent. Many more remain buried deep in the disheveled mass.</p></div></div>`,
+                    bobTip: "The red ones are angry! Pacify them first! Their urgency is... contagious."
+                },
+                {
+                    title: "Step 3: THE RUSH GAUNTLET!",
+                    content: `<div class="text-center"><h3 class="font-bold text-yellow-300 text-2xl mb-4 urgent-text">NOW! PRONTO!! THIS IS AMERICAN NINJA WARRIOR!</h3><p class="mb-3 text-lg">Quickly gather up all of the rushes! Take them over to a desk!</p><p class="mb-6 text-xl font-bold text-cyan-300">MAKE THE JOB! GET THE WORKORDERS! PREP THE PAPERS!</p><div class="border-2 border-red-500 bg-red-900/50 p-4 rounded-lg"><h4 class="font-bold text-red-400 text-lg mb-2">!!! CRITICAL WARNING !!!</h4><p class="text-red-200">If <strong class="text-white">General</strong> (the courier) gets here before they are ready, be prepared to prep those rushes while being carried by a 6'4" tall Bosnian who waits for <strong class="text-white">NOTHING!</strong></p></div></div>`,
+                    bobTip: "GO! GO! GO! General waits for no paperclip! The Bosnian is a force of nature! DO NOT TEST HIM!"
+                },
+                {
+                    title: "Step 4: The Great Sort",
+                    content: `<div class="w-full text-center"><p class="mb-6">With the Rushes handled, you may now sort the remaining documents. Separate them into three distinct stacks.</p><div class="flex flex-col md:flex-row justify-around gap-4 text-left"><div class="flex-1 p-4 border-2 border-gray-500 rounded-lg bg-gray-800/50"><h4 class="font-bold text-xl text-yellow-300 title-font mb-2">Court Jobs</h4><p class="text-sm">You know these by sight. They are familiar, like an old friend who owes you money. Stack them here.</p></div><div class="flex-1 p-4 border-2 border-cyan-400 rounded-lg bg-cyan-900/50"><h4 class="font-bold text-xl text-cyan-300 title-font mb-2">Service Jobs</h4><p class="text-sm mb-2">These are your primary targets. Recognize them by two key traits:</p><ul class="list-disc list-inside text-sm space-y-1"><li>Has an Address for Service.</li><li>Has <strong class="text-red-400">NO</strong> QR code.</li></ul></div><div class="flex-1 p-4 border-2 border-purple-400 rounded-lg bg-purple-900/50"><h4 class="font-bold text-xl text-purple-300 title-font mb-2">Outliers</h4><p class="text-sm">Does it fit the other two? No? Then it's an outlier. A rebel. A mystery. Put these strange ones here. We will deal with their defiance later.</p></div></div></div>`,
+                    bobTip: "Ah, classification! The noble attempt to impose order on chaos. The outliers are the most interesting... they defy the system. For now."
+                },
+                {
+                    title: "Step 5: Settling the Outliers",
+                    content: `<div class="flex flex-col lg:flex-row items-center gap-6 w-full"><div class="lg:w-1/2 text-left"><img src="courtslayer.png" alt="Denis the Courtslayer" class="rounded-lg shadow-lg border-2 border-purple-400 w-full h-auto"></div><div class="lg:w-1/2 text-left text-base italic text-gray-400"><p class="mb-3">"They lie in boothills all through the West. The outlaws, the gunslingers... the Billy the Kids, and worse."</p><p class="mb-3">"Say a fella like the coward that shot Bill Hickock in the back. There's always one like that in every time of history. Most of them were varmints."</p><p class="mb-4">"But every once in a while in one of them there may have lived... <strong class='text-purple-300 not-italic'>A Petition for Judgment Debtor's Exam.</strong>"</p><p class="not-italic text-white font-bold text-lg">The outliers must be settled. Consult with the mighty <strong class="text-purple-300">Denis the Courtslayer</strong>. He is wise and will guide you.</p></div></div>`,
+                    bobTip: "The Courtslayer! His gaze turns flimsy legal arguments to dust! Show him the outliers... he knows what to do with rebels."
+                },
+                {
+                    title: "End of Chapter 1: Intake",
+                    content: `<div class="text-center p-4"><h3 class="font-bold text-yellow-300 text-2xl mb-4 title-font">Next time on.... Office Work:</h3><div class="italic text-gray-300 text-lg space-y-3"><p>The empire is in shambles... the papers are at war...</p><p>Brooke can't save you, no one can save you...</p><p>...but the <strong class="text-cyan-300 not-italic">Service Jobs MUST BE BROUGHT TO HEEL.</strong></p><p class="mt-6 font-bold text-white">What will our intrepid document prep staff do? Find out next time!</p></div></div>`,
+                    bobTip: "Rest now, warrior. The paper war is far from over. Chapter 2 awaits... and it is hungry."
+                }
+            ];
+            
+            // --- CHAPTER 2 CONFIGURATION ---
+            const chapter2Steps = [
+                {
+                    title: "Chapter 2: A New Threat",
+                    content: `
+                        <div class="flex flex-col items-center justify-center h-full">
+                            <img src="statepaper.png" alt="Piles of paper for different states" class="rounded-lg shadow-lg border-2 border-gray-500 w-full h-auto max-w-lg mx-auto mb-8">
+                            <h2 class="title-font text-6xl md:text-8xl text-red-500 urgent-text">PREPARE</h2>
+                        </div>
+                    `,
+                    bobTip: "Take a deep breath. The real battle begins now. Steel your nerves."
+                },
+                {
+                    title: "The G.N.A.W. Protocol",
+                    content: `
+                        <div class="w-full text-center">
+                            <p class="mb-4 text-lg">The Service Jobs are a formidable foe. To defeat them, you must remember one simple, powerful acronym:</p>
+                            <div class="p-4 bg-gray-900/50 rounded-lg border-2 border-yellow-400 max-w-md mx-auto">
+                                <p class="text-5xl title-font text-yellow-300 text-center tracking-widest">G.N.A.W.</p>
+                                <p class="text-center text-sm mt-1 text-yellow-200">You must gnaw at the work, slowly chew through it, like a rodent chewing through a power cable.</p>
+                            </div>
+                            <ul class="list-none space-y-2 mt-6 text-lg inline-block text-left">
+                                <li><strong class="title-font text-gray-400">G</strong> - Others (Silent, awkward... who invented English anyways!?)</li>
+                                <li><strong class="title-font text-red-400">N</strong> - Nevada (The whole state is a psy-op)</li>
+                                <li><strong class="title-font text-green-400">A</strong> - Arizona (You Are Here. X)</li>
+                                <li><strong class="title-font text-blue-400">W</strong> - Washington (Poisonous alphabet soup)</li>
+                            </ul>
+                        </div>
+                    `,
+                    bobTip: "A new challenge! GNAW through the paper flesh! The silent 'G' is the most dangerous. It plots in silence."
+                },
+                {
+                    title: "Divide and Conquer",
+                    content: `
+                        <div class="text-center">
+                            <h3 class="font-bold text-cyan-300 text-4xl title-font">Now, take your big stack o' service jobs.</h3>
+                            <p class="mt-6 text-2xl">Sort them into four piles based on the G.N.A.W. protocol.</p>
+                        </div>
+                    `,
+                    bobTip: "One pile for each letter. Do not mix them. The consequences would be... bureaucratic."
+                },
+                {
+                    title: "CONJOIN AND CONQUER!",
+                    content: `
+                        <div class="flex flex-col lg:flex-row items-center gap-6 w-full">
+                             <div class="lg:w-1/2 text-left text-base">
+                                <p class="mb-4 text-xl">Now that they are all bunched together in their respective jurisdictions...</p>
+                                <p class="font-bold text-yellow-300 text-2xl title-font">PUT THEM IN A BIG STACK!</p>
+                                <p class="mt-4">Keep the stack order in place. Do not disturb the precarious balance you have created.</p>
+                            </div>
+                            <div class="lg:w-1/2 mt-4 lg:mt-0">
+                                <img src="chaospapers.png" alt="A giant, chaotic stack of papers representing different states" class="rounded-lg shadow-lg border-2 border-gray-500 w-full h-auto">
+                            </div>
+                        </div>
+                    `,
+                    bobTip: "BEHOLD! The paper-hydra! A beautiful monster of pure bureaucracy! It's magnificent!"
+                },
+                {
+                    title: "The Great Separation",
+                    content: `
+                        <div class="flex flex-col lg:flex-row items-center gap-6 w-full">
+                            <div class="lg:w-1/2 mt-4 lg:mt-0">
+                                <img src="niccaage.png" alt="Not the bees." class="rounded-lg shadow-lg border-2 border-gray-500 w-full h-auto">
+                            </div>
+                             <div class="lg:w-1/2 text-left text-base">
+                                <p class="mb-4 text-xl">The paper-hydra is assembled. Now, you must perform the unmasking.</p>
+                                <p class="font-bold text-yellow-300 text-2xl title-font urgent-text">REMOVE THE JRV COVERSHEETS!</p>
+                                <p class="mt-4">Place them in their own pile. The order of the documents and the coversheets must remain <strong class="text-red-400">IDENTICAL</strong>. One mistake could cause a catastrophic timeline paradox!</p>
+                            </div>
+                        </div>
+                    `,
+                    bobTip: "Yes, peel away their faces! See the raw, untamed documents beneath! But keep them in order... chaos has its own rules."
+                },
+                {
+                    title: "Scan the Coversheets",
+                    content: `
+                        <div class="flex flex-col lg:flex-row items-center gap-6 w-full">
+                            <div class="lg:w-1/2 text-left text-base">
+                                <p class="mb-4">Load the coversheets into the <strong class="text-cyan-300">Scansnap iX500</strong>.</p>
+                                <p class="mb-4">Open <strong class="text-cyan-300">Scansnap Home</strong> on the PC. It's on the desktop... no no, right... no, in the middle, no, yeah. yes, there, right there, double click that.</p>
+                                <p class="font-bold text-yellow-300 text-xl title-font">Now push the blue lighted button on the scanner, and wait.</p>
+                            </div>
+                            <div class="lg:w-1/2 mt-4 lg:mt-0">
+                                <img src="x500.png" alt="A Scansnap iX500 scanner ascending into the heavens" class="rounded-lg shadow-lg border-2 border-gray-500 w-full h-auto">
+                            </div>
+                        </div>
+                    `,
+                    bobTip: "Feed the machine! It craves the data! The blue light is a portal to the digital realm! PUSH IT!"
+                },
+                {
+                    title: "The X-TRACTOR Ritual",
+                    content: `
+                        <div class="flex flex-col lg:flex-row items-center gap-6 w-full">
+                            <div class="lg:w-1/2 text-left text-base">
+                                <p class="mb-4">Enter the hallowed <strong class="text-cyan-300">"X-TRACTOR"</strong> folder, then proceed to <strong class="text-cyan-300">"my_pdfs"</strong>.</p>
+                                <p class="mb-4">Select all PDFs that do <strong class="text-red-400">NOT</strong> have "OCR" at the end of their filename. These are the unworthy.</p>
+                                <p class="font-bold text-yellow-300 text-xl title-font">Now, move the selected files into the folder named... <strong class="text-red-500 urgent-text">"shithouse"</strong>.</p>
+                            </div>
+                            <div class="lg:w-1/2 mt-4 lg:mt-0">
+                                <img src="xtra.png" alt="The mighty X-Tractor" class="rounded-lg shadow-lg border-2 border-gray-500 w-full h-auto">
+                            </div>
+                        </div>
+                    `,
+                    bobTip: "Cast the unclean data into the abyss! The shithouse craves its tribute! Do not disappoint it."
+                },
+                {
+                    title: "The Spreadsheet Crucible",
+                    content: `
+                        <div class="w-full text-left text-base space-y-4 px-4">
+                            <p>The scan is slow for a reason: it performs OCR with <strong class="text-red-400">extreme prejudice</strong>. Now you must check its work.</p>
+                            <ol class="list-decimal list-inside space-y-3">
+                                <li>Navigate to the <strong class="text-cyan-300">"results"</strong> folder. Check the generated spreadsheets for accuracy against the physical coversheets.</li>
+                                <li>As you verify each sheet, save the <strong class="text-yellow-300">.csv</strong> file as a <strong class="text-green-400">.xlsx</strong> file.</li>
+                                <li>Now, open the file of rejects: <strong class="text-purple-400">"needs_manual_review.csv"</strong>.</li>
+                                <li>Correct the flawed data in this file row by row, using the physical sheets as your guide.</li>
+                                <li>Once a row is corrected, <strong class="text-red-400">copy and paste</strong> it into the appropriate state spreadsheet (<strong class="text-green-400">coversheet_AZ.xlsx</strong>, etc.).</li>
+                            </ol>
+                        </div>
+                    `,
+                    bobTip: "Purity through data entry! Every cell must be perfect. The machine's prejudice is great, but your attention to detail must be greater!"
+                },
+                {
+                    title: "Feed the Beast",
+                    content: `
+                        <div class="w-full text-center">
+                            <p class="mb-4">Now that you have three flawless <strong class="text-green-400">.xlsx</strong> format spreadsheets...</p>
+                            <h3 class="font-bold text-red-500 text-5xl title-font urgent-text mb-4">TRISTAR HUNGERS!</h3>
+                            <p class="mb-4">Go to Tristar. In the top menu, navigate the sacred path:</p>
+                            <p class="text-yellow-300 font-bold text-lg bg-gray-900/70 p-3 rounded-lg inline-block">Batch -> Import Process Orders from Excel</p>
+                            <img src="diestar.png" alt="Tristar menu showing import from excel" class="rounded-lg shadow-lg border-2 border-gray-500 w-full h-auto max-w-md mx-auto my-4">
+                            <p>Find your spreadsheets in the <strong class="text-cyan-300">"results"</strong> folder. Pick one, and hold on to something.</p>
+                        </div>
+                    `,
+                    bobTip: "Make the offering! Do not show fear! Tristar can smell fear! And spreadsheets! It mostly smells spreadsheets."
+                },
+                {
+                    title: "The Final Step...",
+                    content: `
+                        <div class="text-center">
+                            <h3 class="font-bold text-yellow-300 text-2xl mb-6 italic">The Vaughan is darkest right before the dawn!</h3>
+                            <p class="mb-4 text-xl">In the import window, select the <strong class="text-cyan-300">"JRV"</strong> import profile.</p>
+                             <img src="selector.png" alt="Tristar import profile selection" class="rounded-lg shadow-lg border-2 border-gray-500 w-full h-auto max-w-md mx-auto my-4">
+                            <p class="mb-6 text-2xl title-font">-> SELECT <-</p>
+                        </div>
+                    `,
+                    bobTip: "Don't look directly at the import process! It will see into your soul and judge your paperclip-bending history!"
+                },
+                 {
+                    title: "Confirm Import Settings",
+                    content: `
+                        <div class="w-full text-center">
+                            <p class="mb-4">For each state's spreadsheet, confirm the settings match these sacred texts.</p>
+                            <div class="border-b border-gray-600 mb-4">
+                                <nav class="-mb-px flex justify-center space-x-8" aria-label="Tabs">
+                                    <button class="tab-button active" data-tab="az">Arizona</button>
+                                    <button class="tab-button" data-tab="wa">Washington</button>
+                                    <button class="tab-button" data-tab="nv">Nevada</button>
+                                </nav>
+                            </div>
+                            <div id="tab-content">
+                                <div class="tab-pane active" id="az"><img src="azimport.png" class="rounded-lg shadow-lg border-2 border-gray-500 mx-auto"></div>
+                                <div class="tab-pane hidden" id="wa"><img src="waimport.png" class="rounded-lg shadow-lg border-2 border-gray-500 mx-auto"></div>
+                                <div class="tab-pane hidden" id="nv"><img src="nvimport.png" class="rounded-lg shadow-lg border-2 border-gray-500 mx-auto"></div>
+                            </div>
+                        </div>
+                    `,
+                    bobTip: "Check the settings. Check them twice. Tristar is not forgiving of mortal error."
+                },
+                {
+                    title: "End of Chapter 2",
+                    content: `
+                        <div class="text-center p-4">
+                            <h3 class="font-bold text-yellow-300 text-2xl mb-4 title-font">...To Be Continued...</h3>
+                            <div class="italic text-gray-300 text-lg space-y-3">
+                                <p>The data has been offered. The beast has been fed.</p>
+                                <p>What horrors... or efficiencies... has the import process unleashed?</p>
+                                <p class="mt-6 font-bold text-white">The answer lies in the chapters yet to be written...</p>
+                            </div>
+                        </div>
+                    `,
+                    bobTip: "You've done it. For now. Go, rest. Dream of spreadsheets and the silent, judging gaze of the Courtslayer."
+                }
+            ];
+
+            // --- CHAPTER 3 CONFIGURATION ---
+            const chapter3Steps = [
+                {
+                    title: "Chapter 3: The Last Resort",
+                    content: `
+                        <div class="flex flex-col items-center justify-center h-full text-center">
+                            <img src="help.png" alt="Sandy?" class="rounded-lg shadow-lg border-2 border-red-500 w-full h-auto max-w-lg mx-auto mb-8">
+                            <h2 class="text-4xl title-font text-red-400 urgent-text">When all else goes wrong...</h2>
+                            <p class="mt-6 text-2xl">...and the system is in chaos, the data corrupted, and all hope seems lost...</p>
+                            <p class="mt-8 font-bold text-yellow-300 text-5xl title-font">CALL TAYLOR.</p>
+                        </div>
+                    `,
+                    bobTip: "Even I have my limits. Taylor... Taylor operates on a different plane. Make the call. It's the only way to be sure."
+                },
+                {
+                    title: "The Digital Alternative",
+                    content: `
+                        <div class="flex flex-col items-center justify-center h-full text-center">
+                            <p class="text-2xl mb-6">...or if a phone call is too much direct human contact, there is another way.</p>
+                            <h3 class="text-4xl title-font text-cyan-400">Message on Google Chat</h3>
+                            <img src="techsupport.png" alt="Google Chat message showing a problem is fixed" class="rounded-lg shadow-lg border-2 border-gray-500 w-full h-auto max-w-sm mx-auto my-6">
+                            <p class="text-lg">Assistance will arrive.</p>
+                        </div>
+                    `,
+                    bobTip: "A text-based solution! Efficient! Minimal emotional expenditure! This is the way."
+                },
+                {
+                    title: "End of Chapter 3",
+                    content: `
+                        <div class="text-center p-4">
+                            <h3 class="font-bold text-yellow-300 text-2xl mb-4 title-font">A Hero Emerges</h3>
+                            <div class="italic text-gray-300 text-lg space-y-3">
+                                <p>Whether by voice or by text, the call for aid has been answered.</p>
+                                <p>The system is restored. The data is safe.</p>
+                                <p class="mt-6 font-bold text-white">For now.</p>
+                            </div>
+                        </div>
+                    `,
+                    bobTip: "A crisis averted. I shall add this to my records. The 'Taylor Protocol' is now officially documented."
+                }
+            ];
+
+            // --- Element References ---
+            const menuScreen = document.getElementById('menu-screen');
+            const presentationScreen = document.getElementById('presentation-screen');
+            const startChapter1Btn = document.getElementById('start-chapter-1');
+            const startChapter2Btn = document.getElementById('start-chapter-2');
+            const startChapter3Btn = document.getElementById('start-chapter-3');
+            const startChapter4Btn = document.getElementById('start-chapter-4');
+            const contentCard = document.getElementById('content-card');
+            const nextBtn = document.getElementById('next-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const backToMenuBtn = document.getElementById('back-to-menu');
+            const stepIndicator = document.getElementById('step-indicator');
+            const bobSpeechBubble = document.getElementById('bob-speech-bubble');
+            const mainTitle = document.getElementById('main-title');
+            const mainSubtitle = document.getElementById('main-subtitle');
+
+            // --- State ---
+            let currentStepIndex = 0;
+            let presentationSteps = [];
+            let isDenisfieldActive = false;
+
+
+            // --- Functions ---
+            function showMenu() {
+                presentationScreen.style.display = 'none';
+                menuScreen.style.display = 'block';
+                mainTitle.textContent = "Vaughan-a-tron";
+                mainSubtitle.textContent = "Mainframe Instruction Menu";
+            }
+
+            function startPresentation(steps, chapterTitle, chapterSubtitle) {
+                presentationSteps = steps;
+                currentStepIndex = 0;
+                menuScreen.style.display = 'none';
+                presentationScreen.style.display = 'block';
+                mainTitle.textContent = chapterTitle;
+                mainSubtitle.textContent = chapterSubtitle;
+                renderSlide(currentStepIndex, 'anim-fade-in');
+                updateControls();
+            }
+            
+            function renderSlide(index, animationClass) {
+                const step = presentationSteps[index];
+                const existingSlide = contentCard.querySelector('.slide-content');
+                if (existingSlide) {
+                    existingSlide.remove();
+                }
+
+                const slideHTML = `
+                    <div class="slide-content ${animationClass}">
+                        <h2 class="title-font text-xl md:text-2xl text-cyan-300 mb-4 text-center">${step.title}</h2>
+                        <div class="text-center text-lg leading-relaxed max-w-full w-full">${step.content}</div>
+                    </div>`;
+                
+                contentCard.insertAdjacentHTML('afterbegin', slideHTML);
+                
+                if (step.title === "Confirm Import Settings") {
+                    setupTabs();
+                }
+                
+                if (step.bobTip) {
+                    bobSpeechBubble.textContent = step.bobTip;
+                    setTimeout(() => {
+                        bobSpeechBubble.classList.add('visible');
+                    }, 100);
+                } else {
+                    bobSpeechBubble.classList.remove('visible');
+                }
+            }
+            
+            function setupTabs() {
+                const tabs = document.querySelectorAll('.tab-button');
+                const panes = document.querySelectorAll('.tab-pane');
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+                        panes.forEach(p => p.classList.add('hidden'));
+                        document.getElementById(tab.dataset.tab).classList.remove('hidden');
+                    });
+                });
+            }
+
+            function updateControls() {
+                stepIndicator.textContent = `Step ${currentStepIndex + 1} / ${presentationSteps.length}`;
+                prevBtn.disabled = currentStepIndex === 0;
+                nextBtn.disabled = currentStepIndex === presentationSteps.length - 1;
+            }
+
+            function handleTransition(direction) {
+                const oldSlide = contentCard.querySelector('.slide-content');
+                bobSpeechBubble.classList.remove('visible'); // Hide bubble during transition
+                
+                const slideOutClass = direction === 'next' ? 'anim-slide-out-next' : 'anim-slide-out-prev';
+                const slideInClass = direction === 'next' ? 'anim-slide-in-next' : 'anim-slide-in-prev';
+
+                if (oldSlide) {
+                    oldSlide.className = `slide-content ${slideOutClass}`;
+                    oldSlide.addEventListener('animationend', () => {
+                        currentStepIndex += (direction === 'next' ? 1 : -1);
+                        renderSlide(currentStepIndex, slideInClass);
+                        updateControls();
+                    }, { once: true });
+                }
+            }
+
+            // --- Event Listeners ---
+            startChapter1Btn.addEventListener('click', () => {
+                startPresentation(chapter1Steps, "Chapter 1: Intake", "Your Guide to Document Processing");
+            });
+            
+            startChapter2Btn.addEventListener('click', () => {
+                startPresentation(chapter2Steps, "Chapter 2: The Service Jobs", "A Guide to Interstate Conflict");
+            });
+
+            startChapter3Btn.addEventListener('click', () => {
+                startPresentation(chapter3Steps, "Chapter 3: The Last Resort", "Protocol for Total System Failure");
+            });
+            
+            backToMenuBtn.addEventListener('click', showMenu);
+
+            nextBtn.addEventListener('click', () => {
+                if (currentStepIndex < presentationSteps.length - 1) {
+                    handleTransition('next');
+                }
+            });
+
+            prevBtn.addEventListener('click', () => {
+                if (currentStepIndex > 0) {
+                    handleTransition('prev');
+                }
+            });
+
+            // --- Initial Load ---
+            showMenu();
+
+            // --- DENISFIELD LOGIC ---
+            const denisfieldCanvas = document.getElementById('denisfield-canvas');
+            const denisfieldCtx = denisfieldCanvas.getContext('2d');
+            const denisFaceImage = new Image();
+            let denisImageLoaded = false;
+            let denisFaces = [];
+            let denisfieldAnimationId = null;
+
+            const denisConfig = {
+                NUM_FACES: 100,
+                SPEED: 2,
+                IMAGE_URL: 'photostudio_1747074188370.png', // Denis face image
+                MAX_DEPTH: 700,
+                RESET_DEPTH_THRESHOLD: -100,
+                BASE_SCALE_MULTIPLIER: 0.12
+            };
+
+            class DenisFace {
+                constructor() { this.reset(); }
+                reset() {
+                    this.z = Math.random() * denisConfig.MAX_DEPTH;
+                    this.x = Math.random() * denisfieldCanvas.width - denisfieldCanvas.width / 2;
+                    this.y = Math.random() * denisfieldCanvas.height - denisfieldCanvas.height / 2;
+                }
+                update() {
+                    this.z -= denisConfig.SPEED;
+                    if (this.z < denisConfig.RESET_DEPTH_THRESHOLD) {
+                        this.reset();
+                    }
+                }
+                draw() {
+                    if (!denisImageLoaded) return;
+                    const scale = (denisfieldCanvas.width / 2) / (denisfieldCanvas.width / 2 + this.z);
+                    const screenX = denisfieldCanvas.width / 2 + this.x * scale;
+                    const screenY = denisfieldCanvas.height / 2 + this.y * scale;
+                    const size = scale * denisFaceImage.width * denisConfig.BASE_SCALE_MULTIPLIER;
+                    if (size > 0) {
+                        denisfieldCtx.drawImage(denisFaceImage, screenX - size / 2, screenY - size / 2, size, size);
+                    }
+                }
+            }
+
+            function initDenisfield() {
+                denisfieldCanvas.width = window.innerWidth;
+                denisfieldCanvas.height = window.innerHeight;
+                denisFaces = [];
+                for (let i = 0; i < denisConfig.NUM_FACES; i++) {
+                    denisFaces.push(new DenisFace());
+                }
+            }
+
+            function animateDenisfield() {
+                denisfieldCtx.clearRect(0, 0, denisfieldCanvas.width, denisfieldCanvas.height);
+                denisFaces.forEach(face => {
+                    face.update();
+                    face.draw();
+                });
+                denisfieldAnimationId = requestAnimationFrame(animateDenisfield);
+            }
+
+            function startDenisfield() {
+                if (!denisImageLoaded) {
+                    denisFaceImage.onload = () => {
+                        denisImageLoaded = true;
+                        denisfieldCanvas.style.display = 'block';
+                        initDenisfield();
+                        animateDenisfield();
+                    };
+                    denisFaceImage.src = denisConfig.IMAGE_URL;
+                } else {
+                    denisfieldCanvas.style.display = 'block';
+                    initDenisfield();
+                    if(!denisfieldAnimationId) animateDenisfield();
+                }
+            }
+
+            function stopDenisfield() {
+                if (denisfieldAnimationId) {
+                    cancelAnimationFrame(denisfieldAnimationId);
+                    denisfieldAnimationId = null;
+                }
+                denisfieldCanvas.style.display = 'none';
+            }
+            
+            window.addEventListener('resize', () => {
+                if(isDenisfieldActive) {
+                    initDenisfield();
+                }
+            });
+
+            startChapter4Btn.addEventListener('click', () => {
+                isDenisfieldActive = !isDenisfieldActive;
+                if (isDenisfieldActive) {
+                    startDenisfield();
+                    startChapter4Btn.classList.add('bg-purple-800');
+                    startChapter4Btn.classList.remove('bg-purple-600');
+                } else {
+                    stopDenisfield();
+                    startChapter4Btn.classList.remove('bg-purple-800');
+                    startChapter4Btn.classList.add('bg-purple-600');
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>
